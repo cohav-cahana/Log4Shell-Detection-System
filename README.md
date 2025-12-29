@@ -1,5 +1,3 @@
-# Log4Shell-Detection-System
-A real-time detection system for Log4Shell attacks using Python, Regex, and VirusTotal API.
 
 # 🛡️ Log4Shell Detection System (IDS)
 
@@ -22,10 +20,14 @@ This project simulates a real-world attack scenario using a **Kali Linux** attac
 ## ⚙️ How to Run
 1.  Configure the `LOG_FILE_PATH` in the script to match your Apache access log location.
 2.  Add your VirusTotal API Key to the `VT_API_KEY` variable.
-3.  Run the script:
-    ```bash
-    python defender.py
-    ```
+3. Install dependencies:
+   ```bash
+   pip install requests
+   ```
+4. Run the script:
+   ```bash
+   python defender.py
+   ```
 
 ## ⚠️ Disclaimer
 This project is for educational purposes only. Tested in an isolated virtual laboratory.
