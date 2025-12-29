@@ -2,112 +2,137 @@ import time
 import re
 import os
 import requests 
-from urllib.parse import unquote # Tool to decode URL characters (like %20, %7B)
+import ctypes # For Windows Pop-up alerts
+import subprocess # For running system commands (Firewall)
+from urllib.parse import unquote
 
 # --- Configuration ---
 LOG_FILE_PATH = r'C:\xampp\apache\logs\access.log'
-
-# Regex to detect the Log4j payload (looks for ${jndi:...)
 LOG4J_PATTERN = r'\$\{jndi:(?:ldap|rmi|dns)://([^/]+)/'
 
 # VirusTotal API Key
 VT_API_KEY = "MY_API"
+
+def block_ip_in_firewall(ip_address):
+    """
+    Executes a Windows command to block an IP address using the built-in Firewall.
+    WARNING: This script must be run as Administrator for this to work.
+    """
+    rule_name = f"Log4Shell_Block_{ip_address}"
+    
+    # The command to add a blocking rule
+    # dir=in (Block incoming traffic) | action=block (Drop packets)
+    command = f'netsh advfirewall firewall add rule name="{rule_name}" dir=in action=block remoteip={ip_address}'
+    
+    print(f"      [X] ATTEMPTING TO BLOCK IP: {ip_address}...")
+    
+    try:
+        # Run the command silently in the background
+        subprocess.run(command, shell=True, check=True)
+        print(f"      [V] SUCCESS! IP {ip_address} has been blocked in Windows Firewall.")
+        return True
+    except Exception as e:
+        print(f"      [!] FAILED to block IP. Are you running as Admin? Error: {e}")
+        return False
+
+def show_windows_alert(title, message):
+    """
+    Displays a native Windows pop-up alert (Topmost).
+    """
+    try:
+        # 0x10 = Critical Icon, 0x40000 = Top Most window
+        ctypes.windll.user32.MessageBoxW(0, message, title, 0x10 | 0x40000)
+    except Exception as e:
+        print(f"Error showing popup: {e}")
+
 def normalize_log_line(line):
     """
-    Cleans up the log line to remove attacker disguises (Evasion techniques).
+    Cleans up evasion techniques (URL encoding, ${lower:x}).
     """
-    # Step 1: URL Decode
-    # Converts encoded characters like '%7B' back to '{'.
-    # This ensures attackers can't hide by encoding their payload.
     try:
         line = unquote(line)
     except:
-        pass # If decoding fails, just ignore it
-
-    # Step 2: Handle Log4j specific evasion (e.g., ${lower:j})
-    # This creates a "clean" version of the line where ${lower:j} becomes 'j'.
-    # Regex logic: Find '${lower:X}' and replace it with just 'X'.
+        pass
     line = re.sub(r'\$\{(?:lower|upper):(\w)\}', r'\1', line, flags=re.IGNORECASE)
-    
     return line
 
 def check_virustotal(domain):
-    """
-    Checks if a domain is malicious using the VirusTotal API.
-    """
     print(f"      [?] Querying VirusTotal for: {domain}...")
     url = f"https://www.virustotal.com/api/v3/domains/{domain}"
     headers = {"x-apikey": VT_API_KEY}
-
     try:
         response = requests.get(url, headers=headers)
-        
         if response.status_code == 200:
-            # Parse the JSON response to get stats
             stats = response.json()['data']['attributes']['last_analysis_stats']
             malicious_count = stats['malicious']
-            
             if malicious_count > 0:
                 return f"DANGEROUS! ({malicious_count} vendors flagged this)"
-            else:
-                return "Clean"
-                
+            return "Clean"
         elif response.status_code == 404:
-            return "Unknown Domain (Not found in DB)"
-        else:
-            return f"Error connecting to VT (Status: {response.status_code})"
-            
+            return "Unknown Domain"
+        return f"Error ({response.status_code})"
     except Exception as e:
         return f"Connection Error: {e}"
 
 # --- Main Program ---
-print("[*] Starting DEFENDER 3.0 (Anti-Evasion Mode)...")
+print("[*] Starting DEFENDER 7.0 (IPS - Active Blocking Mode)...")
+print("[!] MAKE SURE YOU ARE RUNNING AS ADMINISTRATOR!")
 
-# Check if log file exists
 if not os.path.exists(LOG_FILE_PATH):
     print("Error: Log file not found.")
     exit()
 
 try:
     f = open(LOG_FILE_PATH, 'r')
-    # Jump to the end of the file to monitor only NEW logs
     f.seek(0, os.SEEK_END)
 except Exception as e:
     print(f"Error opening file: {e}")
     exit()
 
 print(f"[*] Monitoring active log: {LOG_FILE_PATH}")
+print("[*] Waiting for attacks...")
 
 while True:
     original_line = f.readline()
-    
-    # If no new line, wait and try again
     if not original_line:
         time.sleep(0.1)
         continue
     
-    # --- The Core Logic ---
-    # Create a normalized (clean) version of the log line for detection
     clean_line = normalize_log_line(original_line)
     
-    # Check for the attack signature in the CLEAN line
+    # --- Detection Logic ---
     if "${jndi:" in clean_line:
         print(f"\n[!!!] ALERT: Sophisticated Log4Shell Attack Detected!")
         
-        # Check if the attacker tried to hide (Evasion)
-        if original_line != clean_line:
-            print(f"      [!] Evasion technique detected and neutralized!")
-            print(f"      Original Payload: {original_line.strip()[-50:]}...") 
-            print(f"      Decoded Payload:  {clean_line.strip()[-50:]}...")
-
-        # Extract the attacker's domain
+        # 1. Extract Attacker IP (Usually the first word in the log line)
+        attacker_ip = original_line.split(' ')[0]
+        
+        # 2. Extract Malicious Payload Domain
+        domain = "Unknown"
         match = re.search(LOG4J_PATTERN, clean_line)
+        vt_result = "N/A"
+        
         if match:
             domain = match.group(1)
-            print(f"      Attacker Address: {domain}")
+            print(f"      Attacker IP: {attacker_ip}")
+            print(f"      Payload Domain: {domain}")
             
-            # Check reputation with VirusTotal
+            # 3. Check Reputation
             vt_result = check_virustotal(domain)
             print(f"      VirusTotal Analysis: {vt_result}")
-        else:
-            print("      [?] Could not extract domain.")
+        
+        # 4. ACTIVE DEFENSE: Block the Attacker!
+        # We block the IP extracted from the log
+        block_success = block_ip_in_firewall(attacker_ip)
+        
+        status_msg = "BLOCKED" if block_success else "FAILED TO BLOCK"
+
+        # 5. Show Pop-up Alert
+        alert_title = "🚨 INTRUSION PREVENTED 🚨"
+        alert_body = (f"Log4Shell Attack Detected!\n\n"
+                      f"Source IP: {attacker_ip}\n"
+                      f"Payload: {domain}\n"
+                      f"VirusTotal: {vt_result}\n\n"
+                      f"Action Taken: firewall Rule Added ({status_msg})")
+        
+        show_windows_alert(alert_title, alert_body)
