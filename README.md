@@ -31,3 +31,8 @@ This project simulates a real-world attack scenario using a **Kali Linux** attac
 
 ## ⚠️ Disclaimer
 This project is for educational purposes only. Tested in an isolated virtual laboratory.
+![LOG4SHELL5](https://github.com/user-attachments/assets/326b2a66-6679-40c5-ba2a-1b1aaff17aca)
+![LOG4SHELL4](https://github.com/user-attachments/assets/167a5d8b-e68c-4e6f-9004-e99aa8858bd2)
+![LOG4SHELL3](https://github.com/user-attachments/assets/cabd037f-9754-41c4-9d8b-8d9bab196968)
+![LOG4SHELL2](https://github.com/user-attachments/assets/04d7a02f-6888-4357-8597-1c07db65fc29)
+![LOG4SHELL1](https://github.com/user-attachments/assets/4377388b-298c-495b-b0ab-e0e9458826e6)
