@@ -34,7 +34,7 @@ This project simulates a full defense cycle against a cyber attack. Using a **Ka
 
 ## 📸 Screenshots
 ![LOG4SHELL7](https://github.com/user-attachments/assets/9a714551-4960-4d01-90ae-731ddcbe8399)
-[LOG4SHELL6](https://github.com/user-attachments/assets/0fa8c185-3c61-4a8c-a164-e8654a656833)
+![LOG4SHELL6](https://github.com/user-attachments/assets/0fa8c185-3c61-4a8c-a164-e8654a656833)
 ![LOG4SHELL5](https://github.com/user-attachments/assets/326b2a66-6679-40c5-ba2a-1b1aaff17aca)
 ![LOG4SHELL4](https://github.com/user-attachments/assets/167a5d8b-e68c-4e6f-9004-e99aa8858bd2)
 ![LOG4SHELL3](https://github.com/user-attachments/assets/cabd037f-9754-41c4-9d8b-8d9bab196968)
